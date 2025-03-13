@@ -1,0 +1,48 @@
+# App Engine configuration for F1 Database Project
+
+# Use Python 3.10 runtime
+runtime: python310
+
+# Use Gunicorn with proper configuration
+entrypoint: gunicorn -w 2 -k gthread -t 60 -b :$PORT main:app
+
+# Use F2 instance class for better memory
+instance_class: F2
+
+# Configure scaling parameters - simplified for reliability
+automatic_scaling:
+  min_instances: 1
+  max_instances: 3
+  min_idle_instances: 1  # Keep at least one warm instance
+  target_cpu_utilization: 0.65
+  max_concurrent_requests: 40  # Lower this to prevent overload
+
+# Environment variables - minimal set for stability
+env_variables:
+  FLASK_ENV: "production"
+  SECRET_KEY: "change-this-to-a-secure-key-in-production"
+  # Remove other unnecessary variables
+
+# Static file handling - simplified
+handlers:
+  # Serve static files directly
+  - url: /static
+    static_dir: static
+    secure: always
+  
+  # All other routes handled by the Flask app
+  - url: /.*
+    script: auto
+    secure: always
+
+# Simplified network settings
+network:
+  session_affinity: true
+
+# Basic health check
+health_check:
+  enable_health_check: true
+  check_interval_sec: 30
+  timeout_sec: 5
+  unhealthy_threshold: 2
+  healthy_threshold: 1

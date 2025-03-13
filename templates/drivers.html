@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Drivers</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        .sortable {
+            cursor: pointer;
+        }
+        .sortable:hover {
+            background-color: #2c3e50;
+        }
+    </style>
+</head>
+<body class="bg-dark text-white">
+
+    <div class="container mt-5">
+        <h1 class="text-center">🏎️ F1 Drivers List</h1>
+
+        <!-- Table -->
+        <div class="table-responsive mt-4">
+            <table class="table table-striped table-hover bg-light text-dark">
+                <thead class="table-dark">
+                    <tr>
+                        <th onclick="sortTable(0)" class="sortable">Name <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable(1)" class="sortable">Age <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable(2)" class="sortable">Team <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable(3)" class="sortable">Race Wins <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable(4)" class="sortable">Pole Positions <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable(5)" class="sortable">Fastest Laps <i class="fa-solid fa-sort"></i></th>
+                        <th onclick="sortTable(6)" class="sortable">World Titles <i class="fa-solid fa-sort"></i></th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="driversTable">
+                    {% for driver in drivers %}
+                    <tr>
+                        <td>{{ driver.name }}</td>
+                        <td>{{ driver.age }}</td>
+                        <td>
+                            <!-- If team name exists use it, otherwise display based on teamId -->
+                            {% if driver.team %}
+                                {{ driver.team }}
+                            {% else %}
+                                <span id="teamName_{{ driver.team_id }}">Loading...</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ driver.race_wins }}</td>
+                        <td>{{ driver.pole_positions }}</td>
+                        <td>{{ driver.fastest_laps }}</td>
+                        <td>{{ driver.world_titles }}</td>
+                        <td>
+                            <a href="/edit_driver/{{ driver.id }}" class="btn btn-warning btn-sm">✏️ Edit</a>
+                            <button onclick="confirmDelete('{{ driver.id }}')" class="btn btn-danger btn-sm">🗑 Delete</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add this section somewhere after your drivers table -->
+        <div class="container mt-4">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <button id="loadMoreBtn" onclick="loadMoreDrivers()" class="btn btn-primary" style="display:none;">
+                        <i class="fas fa-sync"></i> Load More Drivers
+                    </button>
+                    <div id="loaderIndicator" class="spinner-border text-light mt-3" role="status" style="display:none;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back to Home Button -->
+        <div class="text-center mt-4">
+            <a href="/" class="btn btn-primary">🏠 Back to Home</a>
+        </div>
+    </div>
+
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+    function confirmDelete(driverId) {
+        if (confirm("Are you sure you want to delete this driver?")) {
+            fetch(`/delete_driver/${driverId}`, { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    window.location.reload(); // Refresh page to see changes
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred while deleting the driver.");
+                });
+        }
+    }
+
+    // Sorting Function
+    function sortTable(columnIndex) {
+        let table = document.getElementById("driversTable");
+        let rows = Array.from(table.rows);
+        let isAscending = table.dataset.sortDir !== "asc";
+        
+        // Update sort direction
+        table.dataset.sortDir = isAscending ? "asc" : "desc";
+        
+        // Get all sort icons and reset them
+        document.querySelectorAll(".fa-sort-up, .fa-sort-down").forEach(icon => {
+            icon.className = "fa-solid fa-sort";
+        });
+        
+        // Update the icon for the clicked column
+        const headerCells = document.querySelectorAll("th.sortable");
+        const iconClass = isAscending ? "fa-sort-up" : "fa-sort-down";
+        headerCells[columnIndex].querySelector("i").className = "fa-solid " + iconClass;
+
+        rows.sort((rowA, rowB) => {
+            let cellA = rowA.cells[columnIndex].innerText.trim();
+            let cellB = rowB.cells[columnIndex].innerText.trim();
+
+            // Check if we're dealing with numbers
+            if (!isNaN(cellA) && !isNaN(cellB)) {
+                cellA = parseFloat(cellA);
+                cellB = parseFloat(cellB);
+            } else {
+                // Case-insensitive string comparison
+                cellA = cellA.toLowerCase();
+                cellB = cellB.toLowerCase();
+            }
+
+            // Sort based on direction
+            if (isAscending) {
+                return cellA > cellB ? 1 : (cellA < cellB ? -1 : 0);
+            } else {
+                return cellA < cellB ? 1 : (cellA > cellB ? -1 : 0);
+            }
+        });
+
+        // Re-append rows to update the display
+        rows.forEach(row => table.appendChild(row));
+    }
+    </script>
+
+    <!-- Add this before closing </body> tag -->
+    <script>
+        // Team name loading script
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if we have any team IDs to load
+            const teamElements = document.querySelectorAll('[id^="teamName_"]');
+            if (teamElements.length > 0) {
+                let teams = {}; // Store team data
+                let teamIds = new Set(); // Collect unique team IDs
+                
+                // Collect all team IDs we need to load
+                teamElements.forEach(el => {
+                    const teamId = el.id.split("_")[1];
+                    if (teamId) {
+                        teamIds.add(teamId);
+                    }
+                });
+                
+                // Only fetch teams if we have IDs to resolve
+                if (teamIds.size > 0) {
+                    // Fetch all teams once
+                    fetch('/get_teams')
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Build lookup table of team IDs to names
+                            data.forEach(team => {
+                                teams[team.id] = team.name;
+                            });
+                            
+                            // Replace team IDs with names
+                            teamElements.forEach(el => {
+                                const teamId = el.id.split("_")[1];
+                                el.textContent = teams[teamId] || "Unknown Team";
+                                
+                                // Add tooltip with team ID for debugging/admin purposes
+                                el.title = `Team ID: ${teamId}`;
+                            });
+                        })
+                        .catch(error => {
+                            console.error("Error loading teams:", error);
+                            // Handle error by showing team ID
+                            teamElements.forEach(el => {
+                                const teamId = el.id.split("_")[1];
+                                el.textContent = `Team #${teamId}`;
+                                el.classList.add('text-danger');
+                            });
+                        });
+                }
+            }
+        });
+    </script>
+
+    <!-- Add this script at the end of the file, before the closing </body> tag -->
+    <script>
+        // Global variables for pagination
+        let lastDocId = null;
+        const driversPerPage = 10;
+        let isLoading = false;
+        
+        function loadMoreDrivers() {
+            if (isLoading) return; // Prevent multiple simultaneous requests
+            
+            isLoading = true;
+            showLoader(true);
+            
+            // Build API URL with pagination parameters
+            let url = `/get_drivers?format=json&limit=${driversPerPage}`;
+            if (lastDocId) {
+                url += `&start_after=${lastDocId}`;
+            }
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Get the driver list from the response
+                    const drivers = data.drivers || [];
+                    
+                    if (drivers.length > 0) {
+                        // Append new drivers to the existing table
+                        const driverTable = document.getElementById('driversTable');
+                        
+                        drivers.forEach(driver => {
+                            const row = document.createElement('tr');
+                            
+                            // Add driver info to row
+                            row.innerHTML = `
+                                <td>${driver.name}</td>
+                                <td>${driver.age}</td>
+                                <td>${driver.team_name}</td>
+                                <td>${driver.race_wins}</td>
+                                <td>${driver.pole_positions}</td>
+                                <td>${driver.fastest_laps}</td>
+                                <td>${driver.world_titles}</td>
+                                <td>
+                                    <a href="/edit_driver/${driver.id}" class="btn btn-warning btn-sm">✏️ Edit</a>
+                                    <button onclick="confirmDelete('${driver.id}')" class="btn btn-danger btn-sm">🗑 Delete</button>
+                                </td>
+                            `;
+                            
+                            driverTable.appendChild(row);
+                        });
+                        
+                        // Update the last document ID for pagination
+                        lastDocId = data.pagination?.next_page || null;
+                        
+                        // Show/hide load more button
+                        document.getElementById('loadMoreBtn').style.display = 
+                            data.pagination?.has_more ? 'inline-block' : 'none';
+                    } else {
+                        // No more drivers to load
+                        document.getElementById('loadMoreBtn').style.display = 'none';
+                    }
+                    
+                    isLoading = false;
+                    showLoader(false);
+                })
+                .catch(error => {
+                    console.error('Error loading drivers:', error);
+                    showMessage('Failed to load drivers. Please try again.', 'error');
+                    isLoading = false;
+                    showLoader(false);
+                });
+        }
+        
+        function showLoader(show) {
+            document.getElementById('loaderIndicator').style.display = show ? 'inline-block' : 'none';
+            document.getElementById('loadMoreBtn').disabled = show;
+        }
+        
+        // Function to show message to the user
+        function showMessage(message, type = 'info') {
+            // Create alert if it doesn't exist
+            let alertDiv = document.getElementById('alertMessage');
+            if (!alertDiv) {
+                alertDiv = document.createElement('div');
+                alertDiv.id = 'alertMessage';
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+                alertDiv.role = 'alert';
+                
+                const closeBtn = document.createElement('button');
+                closeBtn.type = 'button';
+                closeBtn.className = 'btn-close';
+                closeBtn.setAttribute('data-bs-dismiss', 'alert');
+                closeBtn.setAttribute('aria-label', 'Close');
+                
+                alertDiv.appendChild(closeBtn);
+                document.querySelector('.container').prepend(alertDiv);
+            } else {
+                // Update existing alert
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+            }
+            
+            alertDiv.innerHTML = message + alertDiv.innerHTML.substr(alertDiv.innerHTML.indexOf('<button'));
+        }
+        
+        // Check if we need to show the load more button after initial page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get the current number of drivers in the table
+            const driverRows = document.getElementById('driversTable').getElementsByTagName('tr');
+            
+            // If we have exactly driversPerPage drivers, show the button
+            if (driverRows.length >= driversPerPage) {
+                // Get the last driver's ID
+                const lastRow = driverRows[driverRows.length - 1];
+                const deleteBtn = lastRow.querySelector('button[onclick^="confirmDelete"]');
+                if (deleteBtn) {
+                    // Extract ID from the onclick attribute
+                    const onclickAttr = deleteBtn.getAttribute('onclick');
+                    lastDocId = onclickAttr.substring(
+                        onclickAttr.indexOf("'") + 1, 
+                        onclickAttr.lastIndexOf("'")
+                    );
+                }
+                
+                // Show the Load More button
+                document.getElementById('loadMoreBtn').style.display = 'inline-block';
+            }
+        });
+    </script>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h2>F1 Drivers</h2>
+                <div class="d-flex justify-content-between mb-3">
+                    <button class="btn btn-outline-light" onclick="refreshDrivers()">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                    <span id="cacheStatus" class="badge bg-info align-self-center">Loading...</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th onclick="sortTable(0)">Name <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(1)">Team <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(2)">Race Wins <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(3)">Poles <i class="fas fa-sort"></i></th>
+                                <th onclick="sortTable(4)">Championships <i class="fas fa-sort"></i></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="driversList">
+                            <!-- Drivers will be loaded here -->
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border text-light" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <button id="loadMoreBtn" onclick="loadMoreDrivers()" class="btn btn-primary" style="display:none;">
+                        <i class="fas fa-plus-circle"></i> Load More
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let nextPageToken = null;
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+        const CACHE_KEY = "f1_drivers_data";
+        const CACHE_TIMESTAMP_KEY = "f1_drivers_timestamp";
+        const DRIVERS_PER_PAGE = 10;
+        
+        function loadDrivers(refresh = false) {
+            // Update cache status indicator
+            updateCacheStatus();
+            
+            // Check if we have cached data and it's not a forced refresh
+            const cachedData = localStorage.getItem(CACHE_KEY);
+            const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+            const now = new Date().getTime();
+            
+            if (!refresh && cachedData && cachedTimestamp && (now - cachedTimestamp < CACHE_DURATION)) {
+                // Use cached data
+                displayDrivers(JSON.parse(cachedData));
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById("driversList").innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center">
+                        <div class="spinner-border text-light" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            
+            // Fetch fresh data
+            fetch(`/get_drivers?format=json&limit=${DRIVERS_PER_PAGE}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Cache the response
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+                    localStorage.setItem(CACHE_TIMESTAMP_KEY, now);
+                    
+                    // Display data
+                    displayDrivers(data);
+                    
+                    // Update cache status
+                    updateCacheStatus();
+                })
+                .catch(error => {
+                    console.error("Error fetching drivers:", error);
+                    document.getElementById("driversList").innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-danger">
+                                <i class="fas fa-exclamation-triangle"></i> Failed to load drivers. 
+                                <button class="btn btn-sm btn-outline-danger ms-3" onclick="refreshDrivers()">Try Again</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+        }
+        
+        function displayDrivers(data) {
+            const drivers = data.drivers || [];
+            nextPageToken = data.pagination?.next_page || null;
+            
+            let html = "";
+            
+            drivers.forEach(driver => {
+                html += `
+                    <tr>
+                        <td>${driver.name}</td>
+                        <td>${driver.team_name || driver.team || 'Unknown'}</td>
+                        <td>${driver.race_wins}</td>
+                        <td>${driver.pole_positions}</td>
+                        <td>${driver.world_titles}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/edit_driver/${driver.id}" class="btn btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button onclick="confirmDelete('${driver.id}', '${driver.name}')" class="btn btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById("driversList").innerHTML = html;
+            
+            // Show/hide load more button based on whether there are more results
+            const loadMoreBtn = document.getElementById("loadMoreBtn");
+            loadMoreBtn.style.display = nextPageToken ? "inline-block" : "none";
+        }
+        
+        function loadMoreDrivers() {
+            // Disable button during load
+            const loadMoreBtn = document.getElementById("loadMoreBtn");
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
+            
+            // Build the URL with pagination token
+            let url = `/get_drivers?format=json&limit=${DRIVERS_PER_PAGE}`;
+            if (nextPageToken) {
+                url += `&start_after=${nextPageToken}`;
+            }
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const drivers = data.drivers || [];
+                    
+                    // Update next page token
+                    nextPageToken = data.pagination?.next_page || null;
+                    
+                    // Append new rows to existing table
+                    const currentHTML = document.getElementById("driversList").innerHTML;
+                    let newHTML = currentHTML;
+                    
+                    drivers.forEach(driver => {
+                        newHTML += `
+                            <tr>
+                                <td>${driver.name}</td>
+                                <td>${driver.team_name || driver.team || 'Unknown'}</td>
+                                <td>${driver.race_wins}</td>
+                                <td>${driver.pole_positions}</td>
+                                <td>${driver.world_titles}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/edit_driver/${driver.id}" class="btn btn-warning">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button onclick="confirmDelete('${driver.id}', '${driver.name}')" class="btn btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    document.getElementById("driversList").innerHTML = newHTML;
+                    
+                    // Show/hide load more button
+                    loadMoreBtn.style.display = nextPageToken ? "inline-block" : "none";
+                    loadMoreBtn.disabled = false;
+                    loadMoreBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Load More';
+                })
+                .catch(error => {
+                    console.error("Error loading more drivers:", error);
+                    loadMoreBtn.disabled = false;
+                    loadMoreBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error - Try Again';
+                });
+        }
+        
+        function refreshDrivers() {
+            // Force fresh data load
+            loadDrivers(true);
+        }
+        
+        function confirmDelete(driverId, driverName) {
+            if (confirm(`Are you sure you want to delete ${driverName || 'this driver'}?`)) {
+                fetch(`/delete_driver/${driverId}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    // Refresh the driver list from server to ensure we have latest data
+                    refreshDrivers();
+                    alert('Driver deleted successfully!');
+                })
+                .catch(error => {
+                    console.error("Error deleting driver:", error);
+                    alert(`Failed to delete driver: ${error.message}`);
+                });
+            }
+        }
+        
+        function updateCacheStatus() {
+            const cachedTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+            const statusElement = document.getElementById("cacheStatus");
+            
+            if (!cachedTimestamp) {
+                statusElement.innerHTML = '<i class="fas fa-sync-alt"></i> No Cache';
+                statusElement.className = 'badge bg-secondary align-self-center';
+                return;
+            }
+            
+            const now = new Date().getTime();
+            const age = Math.floor((now - cachedTimestamp) / 1000); // Age in seconds
+            
+            if (age < 60) {
+                statusElement.innerHTML = `<i class="fas fa-check-circle"></i> Fresh Data (${age}s ago)`;
+                statusElement.className = 'badge bg-success align-self-center';
+            } else if (age < 300) { // 5 minutes
+                const minutes = Math.floor(age / 60);
+                statusElement.innerHTML = `<i class="fas fa-database"></i> Cached Data (${minutes}m ago)`;
+                statusElement.className = 'badge bg-info align-self-center';
+            } else {
+                statusElement.innerHTML = '<i class="fas fa-exclamation-circle"></i> Cache Expired';
+                statusElement.className = 'badge bg-warning align-self-center';
+            }
+        }
+        
+        function sortTable(columnIndex) {
+            // Your existing sort code here...
+        }
+        
+        // Load drivers when the page loads
+        document.addEventListener("DOMContentLoaded", loadDrivers);
+        
+        // Set up a refresh timer to update cache status
+        setInterval(updateCacheStatus, 10000); // Update every 10 seconds
+    </script>
+
+</body>
+</html>

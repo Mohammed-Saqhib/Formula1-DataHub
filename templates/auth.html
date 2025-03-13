@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Signup</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" 
+          crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            background-color: #343a40;
+            color: white;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+    </style>
+    <script type="module">
+// Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { 
+getAuth, 
+            signInWithPopup, 
+            GoogleAuthProvider,
+signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+signOut 
+} from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+// Your Firebase configuration - make sure this is correct
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJHYKVSNmwWiK0gQFP62zaCj06DtDAzBw",
+            authDomain: "f1-database-project.firebaseapp.com",
+            projectId: "f1-database-project",
+            storageBucket: "f1-database-project",
+            messagingSenderId: "624367437776",
+            appId: "1:624367437776:web:e0f145d99374a182dddbd5",
+            measurementId: "G-JFD79KWGLM"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        // Function to send user token to backend
+        function sendUserToBackend(user) {
+            showLoading(true);
+
+            user.getIdToken()
+                .then(idToken => {
+                                        fetch('/google-login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            idToken: idToken,  // This matches what the backend expects
+                            email: user.email,
+                            display_name: user.displayName || user.email.split('@')[0]
+                        })
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            return response.json();
+                        }
+                        throw new Error('Failed to authenticate with server');
+                    })
+                    .then(data => {
+                                                console.log('Authentication successful', data);
+                        window.location.href = "/";
+                    })
+                    .catch(error => {
+                        console.error('Backend auth error:', error);
+                        alert(`Server authentication failed. Please try again.`);
+showLoading(false);
+                    });
+})
+                .catch(error => {
+                    console.error('Token generation error:', error);
+                    alert('Failed to generate authentication token.');
+                    showLoading(false);
+                });
+        }
+
+        // Google Sign-in function
+        function googleLogin() {
+            // Using Firebase v9 modular SDK
+            const provider = new GoogleAuthProvider();
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    const user = result.user;
+                    user.getIdToken()
+                        .then(idToken => {
+                            fetch('/api/auth/google-login', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ 
+                                    idToken: idToken  // Use 'idToken' to match backend
+                                })
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error('Server response was not ok');
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                console.log('Authentication successful', data);
+                                window.location.href = "/";
+                            })
+                            .catch(error => {
+                                console.error('Backend auth error:', error);
+                                alert(`Server authentication failed. Please try again.`);
+                            });
+                        });
+                })
+                .catch((error) => {
+                    console.error('Google sign-in error:', error);
+                    alert(`Google sign-in failed: ${error.message}`);
+                });
+        }
+
+        // Regular Email/Password Login
+        function loginUser() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                alert('Please enter both email and password');
+                return;
+            }
+            
+            showLoading(true);
+            
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    sendUserToBackend(user);
+                })
+                .catch((error) => {
+                    console.error(error);
+                    alert(`Login failed: ${error.message}`);
+                    showLoading(false);
+                });
+        }
+
+        // Email/Password Registration
+        function registerUser() {
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            
+            if (!email || !password) {
+                alert('Please enter both email and password');
+                return;
+            }
+            
+            showLoading(true);
+            
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    alert('Registration successful! Please log in.');
+                    document.getElementById('signup-email').value = '';
+                    document.getElementById('signup-password').value = '';
+                    showLoading(false);
+                })
+                .catch((error) => {
+                    console.error(error);
+                    alert(`Registration failed: ${error.message}`);
+                    showLoading(false);
+                });
+        }
+
+        // Logout function
+        function logoutUser() {
+            showLoading(true);
+
+            signOut(auth)
+                .then(() => {
+                                        fetch('/logout')
+                        .then(() => {
+                            window.location.href = "/auth";
+                        })
+                        .catch(error => {
+                            console.error('Logout error:', error);
+                            alert(`Error during logout: ${error.message}`);
+showLoading(false);
+                        });
+                })
+                .catch((error) => {
+                    console.error('Firebase logout error:', error);
+                    alert(`Logout error: ${error.message}`);
+showLoading(false);
+                });
+        }
+
+// Expose functions to global scope for use in HTML
+        window.googleLogin = googleLogin;
+        window.loginUser = loginUser;
+        window.registerUser = registerUser;
+                window.logoutUser = logoutUser;
+    </script>
+</head>
+<body class="bg-dark text-white">
+    <div class="container mt-5">
+        <h1 class="text-center">Login & Signup</h1>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form id="loginForm" class="p-4 shadow-lg bg-light text-dark rounded">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-envelope"></i> Email:</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-lock"></i> Password:</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                </form>
+                <div class="text-center mt-3">
+                    <button class="btn btn-danger w-100" onclick="googleLogin()">
+                        <i class="fa-brands fa-google"></i> Sign in with Google
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function googleLogin() {
+            // Your Google login logic here
+        }
+    </script>
+</body>
+</html>

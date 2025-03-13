@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add F1 Driver</title>
+    
+    <!-- Use Minified Bootstrap with integrity check -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" 
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" 
+          crossorigin="anonymous">
+          
+    <!-- Use Minified FontAwesome with integrity check and preconnect -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+          
+    <!-- Load custom CSS asynchronously -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/styles.css') }}" media="print" onload="this.media='all'">
+</head>
+<body class="bg-dark text-white">
+
+<!-- Add this right after the opening <body> tag -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/"><i class="fas fa-flag-checkered"></i> F1 Database</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/"><i class="fas fa-home"></i> Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/get_drivers"><i class="fas fa-users"></i> Drivers</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                {% if user %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user-circle"></i> {{ user.display_name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="/auth"><i class="fas fa-sign-in-alt"></i> Login</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Add this after the navbar to show authentication status -->
+{% if not user %}
+<script>
+    // Redirect to login if not authenticated
+    window.location.href = "/auth";
+</script>
+{% else %}
+<div class="container mt-3">
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <i class="fas fa-info-circle"></i> Welcome back, <strong>{{ user.display_name }}</strong>!
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+</div>
+{% endif %}
+
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">🏎️ Add F1 Driver</h1>
+        
+        <!-- 🔹 Flash Message Box -->
+        <div id="messageBox" class="alert text-center" style="display: none;"></div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form id="driverForm" class="p-4 shadow-lg bg-light text-dark rounded">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-user"></i> Name:</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-calendar"></i> Age:</label>
+                        <input type="number" class="form-control" name="age" required>
+                    </div>
+
+                    <!-- Replace the existing team input field with this dropdown -->
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-flag-checkered"></i> Team:</label>
+                        <select name="team_id" id="teamSelect" class="form-control" required>
+                            <option value="">Select Team</option>
+                            <!-- Teams will be populated dynamically -->
+                        </select>
+                        <div class="form-text text-muted">
+                            <button type="button" class="btn btn-sm btn-outline-secondary mt-1" data-bs-toggle="modal" data-bs-target="#addTeamModal">
+                                <i class="fas fa-plus-circle"></i> Add New Team
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-trophy"></i> Race Wins:</label>
+                        <input type="number" class="form-control" name="race_wins" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-star"></i> Pole Positions:</label>
+                        <input type="number" class="form-control" name="pole_positions" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-bolt"></i> Fastest Laps:</label>
+                        <input type="number" class="form-control" name="fastest_laps" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-award"></i> World Titles:</label>
+                        <input type="number" class="form-control" name="world_titles" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">🚀 Add Driver</button>
+                </form>
+            </div>
+        </div>
+
+        <h1 class="text-center mt-4">🏁 View All Drivers</h1>
+        <div class="text-center">
+            <a href="/get_drivers" class="btn btn-success"><i class="fa-solid fa-users"></i> View Drivers</a>
+        </div>
+    </div>
+
+    <!-- Search Drivers Section -->
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">🔍 Search Drivers</h1>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form id="searchForm" class="p-4 shadow-lg bg-light text-dark rounded">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-filter"></i> Search by:</label>
+                        <select name="field" class="form-control">
+                            <option value="name">Name</option>
+                            <option value="team">Team</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-search"></i> Search term:</label>
+                        <input type="text" name="value" class="form-control" placeholder="Search..." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">🔍 Search Drivers</button>
+                </form>
+                <div id="searchResults" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this after the search section -->
+
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">🔍 Filter Drivers</h2>
+        <div class="row justify-content-center">
+            <div class="col-md-6"></div>
+                <form id="filterForm" class="p-4 shadow-lg bg-light text-dark rounded">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-flag-checkered"></i> Team:</label>
+                        <input type="text" name="team" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-trophy"></i> Min Race Wins:</label>
+                        <input type="number" name="min_wins" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-award"></i> Min World Titles:</label>
+                        <input type="number" name="min_titles" class="form-control">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">🔍 Apply Filter</button>
+                </form>
+                <div id="filteredResults" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this after the filter section -->
+    <div class="container mt-5 mb-5">
+        <h2 class="text-center mb-4">🏆 Compare Drivers</h2>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form id="compareForm" class="p-4 shadow-lg bg-light text-dark rounded">
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-user"></i> Select Driver 1:</label>
+                        <select id="driver1" name="driver1" class="form-control" required>
+                            <option value="">Select a driver</option>
+                            <!-- Options will be loaded dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-user"></i> Select Driver 2:</label>
+                        <select id="driver2" name="driver2" class="form-control" required>
+                            <option value="">Select a driver</option>
+                            <!-- Options will be loaded dynamically -->
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100"><i class="fa-solid fa-scale-balanced"></i> Compare Drivers</button>
+                </form>
+                <div id="compareResults" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔹 JavaScript to Handle Flash Messages -->
+    <script>
+        document.getElementById("driverForm").addEventListener("submit", function(event) {
+            event.preventDefault();  // Prevent default form submission
+            
+            let formData = new FormData(this);
+
+            fetch("/add_driver", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                showMessage(data.message, data.status);
+                if (data.status === "success") {
+                    document.getElementById("driverForm").reset();  // Reset form on success
+                }
+            })
+            .catch(error => showMessage("Error: Unable to submit form!", "error"));
+        });
+
+        function showMessage(message, type) {
+            let messageBox = document.getElementById("messageBox");
+            messageBox.style.display = "block";
+            messageBox.className = `alert ${type === "success" ? "alert-success" : "alert-danger"}`;
+            messageBox.innerHTML = message;
+            setTimeout(() => messageBox.style.display = "none", 3000);
+        }
+
+        // Search form handling
+        document.getElementById("searchForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const query = new URLSearchParams(formData).toString();
+            
+            fetch(`/search_drivers?${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsDiv = document.getElementById("searchResults");
+                    
+                    if (data.length === 0) {
+                        resultsDiv.innerHTML = '<div class="alert alert-info">No drivers found matching your search.</div>';
+                        return;
+                    }
+                    
+                    let html = '<div class="card bg-dark text-white"><div class="card-header">Search Results</div><div class="card-body"><ul class="list-group">';
+                    
+                    data.forEach(driver => {
+                        html += `<li class="list-group-item bg-dark text-white">
+                            <strong>${driver.name}</strong> - ${driver.team} 
+                            <div class="small">
+                                Age: ${driver.age} | Wins: ${driver.race_wins} | Titles: ${driver.world_titles}
+                            </div>
+                        </li>`;
+                    });
+                    
+                    html += '</ul></div></div>';
+                    resultsDiv.innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById("searchResults").innerHTML = 
+                        '<div class="alert alert-danger">Error retrieving search results. Please try again.</div>';
+                    console.error("Error:", error);
+                });
+        });
+
+        document.getElementById("filterForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            const params = new URLSearchParams();
+            
+            // Add format=json parameter
+            params.append('format', 'json');
+            
+            // Only add parameters that have values
+            for (const [key, value] of formData.entries()) {
+                if (value) params.append(key, value);
+            }
+            
+            // Show loading indicator
+            document.getElementById("filteredResults").innerHTML = 
+                '<div class="text-center"><div class="spinner-border text-light" role="status"></div><p>Loading results...</p></div>';
+            
+            fetch(`/get_drivers?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    const resultsDiv = document.getElementById("filteredResults");
+                    
+                    if (data.length === 0) {
+                        resultsDiv.innerHTML = '<div class="alert alert-info">No matching drivers found.</div>';
+                        return;
+                    }
+                    
+                    let html = '<div class="card bg-dark text-white"><div class="card-header">Filtered Results</div><div class="card-body"><ul class="list-group">';
+                    
+                    data.forEach(driver => {
+                        html += `<li class="list-group-item bg-dark text-white">
+                            <strong>${driver.name}</strong> - ${driver.team} 
+                            <div class="small">
+                                Age: ${driver.age} | Wins: ${driver.race_wins} | Titles: ${driver.world_titles}
+                            </div>
+                            <div class="mt-2">
+                                <a href="/edit_driver/${driver.id}" class="btn btn-warning btn-sm">✏️ Edit</a>
+                                <button onclick="deleteFilteredDriver('${driver.id}')" class="btn btn-danger btn-sm">🗑️ Delete</button>
+                            </div>
+                        </li>`;
+                    });
+                    
+                    html += '</ul></div></div>';
+                    resultsDiv.innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById("filteredResults").innerHTML = 
+                        '<div class="alert alert-danger">Error retrieving filtered results.</div>';
+                    console.error("Error:", error);
+                });
+        });
+
+        function deleteFilteredDriver(driverId) {
+            if (confirm("Are you sure you want to delete this driver?")) {
+                fetch(`/delete_driver/${driverId}`, { 
+                    method: "POST"
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showMessage(data.message, "success");
+                    // Re-run the filter to update results
+                    document.getElementById("filterForm").dispatchEvent(new Event('submit'));
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    showMessage("Error deleting driver", "error");
+                });
+            }
+        }
+
+        // Load driver options for comparison dropdowns
+        function loadDrivers() {
+            fetch("/get_drivers?format=json")
+                .then(response => response.json())
+                .then(data => {
+                    // Sort drivers alphabetically by name
+                    data.sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    // Create base option
+                    let baseOptions = '<option value="">Select a driver</option>';
+                    
+                    // Add all drivers as options
+                    let driverOptions = baseOptions + data.map(driver => 
+                        `<option value="${driver.id}">${driver.name} (${driver.team})</option>`
+                    ).join('');
+                    
+                    // Set the options for both dropdowns
+                    document.getElementById("driver1").innerHTML = driverOptions;
+                    document.getElementById("driver2").innerHTML = driverOptions;
+                })
+                .catch(error => {
+                    console.error("Error loading drivers:", error);
+                    showMessage("Failed to load driver list", "error");
+                });
+        }
+
+        document.getElementById("compareForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            
+            const driver1 = document.getElementById('driver1').value;
+            const driver2 = document.getElementById('driver2').value;
+            
+            if (!driver1 || !driver2) {
+                showMessage('Please select two drivers to compare', 'error');
+                return;
+            }
+            
+            if (driver1 === driver2) {
+                showMessage('Please select two different drivers to compare', 'error');
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('compareResults').innerHTML = 
+                '<div class="text-center"><div class="spinner-border text-light" role="status"></div><p>Comparing drivers...</p></div>';
+
+            const formData = new FormData(this);
+            const query = new URLSearchParams(formData).toString();
+
+            fetch(`/compare_drivers?format=json&${query}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('compareResults').innerHTML = 
+                            `<div class="alert alert-danger">${data.error}</div>`;
+                        return;
+                    }
+                    
+                    const d1 = data.driver1;
+                    const d2 = data.driver2;
+                    const diff = data.comparison;
+                    
+                    // Create comparison card with simplified statistics
+                    let html = `
+                    <div class="card bg-dark text-white">
+                        <div class="card-header">
+                            <h5 class="mb-0">Driver Comparison</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center mb-3">
+                                <div class="col-5 bg-primary bg-opacity-25 py-2 rounded">
+                                    <h5>${d1.name}</h5>
+                                    <p class="text-muted mb-0">${d1.team}</p>
+                                </div>
+                                <div class="col-2 d-flex align-items-center justify-content-center">
+                                    <h5>VS</h5>
+                                </div>
+                                <div class="col-5 bg-danger bg-opacity-25 py-2 rounded">
+                                    <h5>${d2.name}</h5>
+                                    <p class="text-muted mb-0">${d2.team}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-dark table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>${d1.name}</th>
+                                            <th>Statistic</th>
+                                            <th>${d2.name}</th>
+                                            <th>Diff</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>${d1.age}</td>
+                                            <td>Age</td>
+                                            <td>${d2.age}</td>
+                                            <td>${diff.age_diff}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>${d1.race_wins}</td>
+                                            <td>Race Wins</td>
+                                            <td>${d2.race_wins}</td>
+                                            <td>${diff.wins_diff}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>${d1.pole_positions}</td>
+                                            <td>Pole Positions</td>
+                                            <td>${d2.pole_positions}</td>
+                                            <td>${diff.poles_diff}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>${d1.fastest_laps}</td>
+                                            <td>Fastest Laps</td>
+                                            <td>${d2.fastest_laps}</td>
+                                            <td>${diff.fastest_laps_diff}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>${d1.world_titles}</td>
+                                            <td>World Titles</td>
+                                            <td>${d2.world_titles}</td>
+                                            <td>${diff.titles_diff}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <a href="/edit_driver/${d1.id}" class="btn btn-warning btn-sm">✏️ Edit ${d1.name}</a>
+                                <a href="/edit_driver/${d2.id}" class="btn btn-warning btn-sm ms-2">✏️ Edit ${d2.name}</a>
+                            </div>
+                        </div>
+                    </div>`;
+                    
+                    document.getElementById('compareResults').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    document.getElementById('compareResults').innerHTML = 
+                        '<div class="alert alert-danger">Error comparing drivers. Please try again.</div>';
+                });
+        });
+
+        // Load drivers when page loads
+        document.addEventListener('DOMContentLoaded', loadDrivers);
+    </script>
+
+    <!-- Add this script right before the closing </body> tag -->
+    <script>
+        // Function to load teams into the dropdown
+        function loadTeams() {
+            fetch('/get_teams')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    let teamDropdown = document.getElementById('teamSelect');
+                    
+                    // Clear existing options (except the first one)
+                    while (teamDropdown.options.length > 1) {
+                        teamDropdown.remove(1);
+                    }
+                    
+                    // Sort alphabetically
+                    data.sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    // Add all teams to dropdown
+                    data.forEach(team => {
+                        let option = document.createElement('option');
+                        option.value = team.id; // Use team ID
+                        option.textContent = team.name; // Display team name
+                        teamDropdown.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error loading teams:", error);
+                    showMessage("Failed to load teams. Please try again or contact support.", "error");
+                });
+        }
+
+        // Load teams when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load teams for the dropdown
+            loadTeams();
+            
+            // Also load drivers for the comparison dropdowns (if that function exists)
+            if (typeof loadDrivers === 'function') {
+                loadDrivers();
+            }
+        });
+        
+        // If you add the team modal, add a function to reload teams after adding a new one
+        function reloadTeamsAfterAdd() {
+            loadTeams();
+        }
+    </script>
+
+    <!-- Add this script to handle form submission and update the drivers list -->
+    <script>
+      document.getElementById("driverForm").addEventListener("submit", function(event) {
+          event.preventDefault();
+          
+          // Show loading state on submit button
+          const submitBtn = this.querySelector('button[type="submit"]');
+          const originalBtnText = submitBtn.innerHTML;
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding...';
+
+          let formData = new FormData(this);
+
+          fetch("/add_driver", {
+              method: "POST",
+              body: formData
+          })
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Server responded with status: ' + response.status);
+              }
+              return response.json();
+          })
+          .then(data => {
+              if (data.status === "success") {
+                  // Show success message with toast or alert
+                  showMessage("Driver added successfully!", "success");
+                  
+                  // Reset form fields
+                  document.getElementById("driverForm").reset();
+                  
+                  // Clear team selection dropdown
+                  document.getElementById("teamSelect").value = "";
+                  
+                  // Clear any cached driver data to ensure fresh data loads
+                  localStorage.removeItem("f1_drivers_data");
+                  localStorage.removeItem("f1_drivers_timestamp");
+                  
+                  // If we're on a page with drivers list, reload it
+                  if (typeof loadDrivers === 'function') {
+                      loadDrivers(true);  // Force refresh
+                  }
+                  
+                  // Or if we want to redirect to drivers page
+                  // window.location.href = "/drivers";
+              } else {
+                  // Show error message
+                  showMessage("Error adding driver: " + (data.error || "Unknown error"), "danger");
+              }
+          })
+          .catch(error => {
+              console.error("Error:", error);
+              showMessage("Failed to add driver. Please try again.", "danger");
+          })
+          .finally(() => {
+              // Restore submit button
+              submitBtn.disabled = false;
+              submitBtn.innerHTML = originalBtnText;
+          });
+      });
+      
+      // Function to display messages
+      function showMessage(message, type = "info") {
+          // Check if we already have a message container
+          let messageContainer = document.getElementById("messageContainer");
+          
+          if (!messageContainer) {
+              // Create a container for messages if it doesn't exist
+              messageContainer = document.createElement("div");
+              messageContainer.id = "messageContainer";
+              messageContainer.className = "position-fixed top-0 end-0 p-3";
+              messageContainer.style.zIndex = "5";
+              document.body.appendChild(messageContainer);
+          }
+          
+          // Create toast element
+          const toastId = "toast-" + Date.now();
+          const toastEl = document.createElement("div");
+          toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+          toastEl.id = toastId;
+          toastEl.setAttribute("role", "alert");
+          toastEl.setAttribute("aria-live", "assertive");
+          toastEl.setAttribute("aria-atomic", "true");
+          
+          toastEl.innerHTML = `
+              <div class="d-flex">
+                  <div class="toast-body">
+                      ${message}
+                  </div>
+                  <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+              </div>
+          `;
+          
+          messageContainer.appendChild(toastEl);
+          
+          // Initialize and show the toast
+          const toast = new bootstrap.Toast(toastEl, { 
+              autohide: true,
+              delay: 5000
+          });
+          toast.show();
+          
+          // Remove toast from DOM after it's hidden
+          toastEl.addEventListener('hidden.bs.toast', function () {
+              toastEl.remove();
+          });
+      }
+      
+      // Optional: Add form validation
+      (function() {
+          'use strict';
+          
+          // Fetch all forms that need validation
+          const forms = document.querySelectorAll('.needs-validation');
+          
+          // Loop over them and prevent submission
+          Array.from(forms).forEach(form => {
+              form.addEventListener('submit', event => {
+                  if (!form.checkValidity()) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                  }
+                  
+                  form.classList.add('was-validated');
+              }, false);
+          });
+      })();
+    </script>
+
+    <!-- Add this script to handle fetching drivers with debounce -->
+    <script>
+        let fetchDriversTimeout;
+
+        function fetchDrivers() {
+            clearTimeout(fetchDriversTimeout);
+            fetchDriversTimeout = setTimeout(() => {
+                fetch('/get_drivers')
+                    .then(response => response.json())
+                    .then(data => console.log("Drivers:", data))
+                    .catch(error => console.error("Error loading drivers:", error));
+            }, 500); // Debounce by 500ms
+        }
+
+        // Example usage: Call fetchDrivers when a button is clicked
+        document.getElementById('fetch-drivers-btn').addEventListener('click', fetchDrivers);
+    </script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
